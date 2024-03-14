@@ -33,7 +33,7 @@ fn rocket() -> _ {
         .mount("/", routes![get_geojson])
         .configure(rocket::Config {
             address: "0.0.0.0".parse().unwrap(),
-            port: 3000,
+            port: 8080,
             ..rocket::Config::default()
         })  
 }
