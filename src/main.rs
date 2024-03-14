@@ -30,5 +30,10 @@ fn rocket() -> _ {
     let config = Config::release_default();
 
     rocket::custom(config)
-         .mount("/", routes![get_geojson])
+        .mount("/", routes![get_geojson])
+        .configure(rocket::Config {
+            address: "0.0.0.0".parse().unwrap(),
+            port: 3000,
+            ..rocket::Config::default()
+        })  
 }
