@@ -1,1 +1,1 @@
-web: ROCKET_PORT=$PORT ROCKET_KEEP_ALIVE=0 ROCKET_ENV=production ./target/release/geob-rust-api
+web: ROCKET_PORT=$PORT ROCKET_KEEP_ALIVE=0 ROCKET_ENV=production ./target/release/geojson-api
