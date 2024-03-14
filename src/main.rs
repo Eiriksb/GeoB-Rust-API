@@ -4,6 +4,7 @@ use rocket::serde::json::Json;
 use std::path::PathBuf;
 use serde_json::Value;
 use std::fs;
+use rocket::Config;
 
 #[get("/geojson?<iso3>&<query>&<adm_level>")]
 async fn get_geojson(iso3: String, query: String, adm_level: String) -> Json<Value> {
@@ -26,5 +27,8 @@ async fn get_geojson(iso3: String, query: String, adm_level: String) -> Json<Val
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![get_geojson])
+    let config = Config::release_default();
+
+    rocket::custom(config)
+         .mount("/", routes![get_geojson])
 }

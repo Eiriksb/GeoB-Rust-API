@@ -1,1 +1,1 @@
-web: ROCKET_PORT=8080 ROCKET_KEEP_ALIVE=0 ROCKET_ENV=production ./target/release/geojson-api
+web: ROCKET_KEEP_ALIVE=0 ROCKET_ENV=production ./target/release/geojson-api
