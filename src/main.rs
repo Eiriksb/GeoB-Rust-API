@@ -5,23 +5,30 @@ use std::path::PathBuf;
 use serde_json::Value;
 use std::fs;
 use rocket::Config;
+use urlencoding::decode;
+use std::borrow::Cow;
 
 #[get("/geojson?<iso3>&<query>&<adm_level>")]
 async fn get_geojson(iso3: String, query: String, adm_level: String) -> Json<Value> {
+    // Decode the query parameter to get the original string
+    let decoded_query = decode(&query).unwrap_or_else(|_| Cow::Borrowed(&query));
+
     let file_path = PathBuf::from("./data/geojsons")
         .join(adm_level)
         .join(iso3)
-        .join(query)
+        .join(decoded_query.to_string())
         .with_extension("json");
 
-    match fs::read_to_string(file_path) {
+    let file_path_clone = file_path.clone();
+    match fs::read_to_string(file_path_clone) {
         Ok(contents) => {
             match serde_json::from_str::<Value>(&contents) {
                 Ok(json_value) => Json(json_value),
                 Err(_) => Json(Value::String("Invalid JSON".to_string())),
             }
         },
-        Err(_) => Json(Value::String("File not found".to_string())),
+        // If the file is not found, return a 404 error and the file path
+        Err(_) => Json(Value::String(format!("File not found: {}", file_path.display()))),
     }
 }
 
