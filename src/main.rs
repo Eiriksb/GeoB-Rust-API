@@ -10,38 +10,71 @@ use std::borrow::Cow;
 use strsim::jaro_winkler;
 
 #[get("/geojson?<iso3>&<query>&<adm_level>")]
-async fn get_geojson(iso3: String, query: String, adm_level: String) -> Json<Value> {
-    // Decode the query parameter to get the original string
-    let decoded_query = decode(&query).unwrap_or_else(|_| Cow::Borrowed(&query));
+async fn get_geojson(iso3: String, query: Option<String>, adm_level: String) -> Json<Value> {
+    // Check if a query is provided
+    if let Some(query) = query {
+        // Decode the query
+        let decoded_query = decode(&query).unwrap_or(Cow::Borrowed(&query)).into_owned();
 
-    // Example function to load all available queries for a given iso3 and adm_level
-    // This is a placeholder and should be replaced with your actual implementation
-    let available_queries = load_available_queries(&iso3, &adm_level);
+        // Load all available queries for the given iso3 and adm_level
+        let available_queries = load_available_queries(&iso3, &adm_level);
 
-    // Find the best match based on the input query
-    let best_match = find_best_match(&decoded_query, &available_queries);
+        // Find the best match based on the input query
+        let best_match = find_best_match(&decoded_query, &available_queries);
 
-    // If a best match is found, attempt to return its data
-    if let Some(best_match) = best_match {
-        let file_path = PathBuf::from("./data/geojsons")
-            .join(adm_level)
-            .join(iso3)
-            .join(best_match)
-            .with_extension("json");
-
-        match fs::read_to_string(file_path) {
-            Ok(contents) => {
-                match serde_json::from_str::<Value>(&contents) {
-                    Ok(json_value) => return Json(json_value),
-                    Err(_) => return Json(Value::String("Invalid JSON".to_string())),
-                }
-            },
-            Err(_) => return Json(Value::String("File not found".to_string())),
+        // If a best match is found, attempt to return its data
+        if let Some(best_match) = best_match {
+            return attempt_to_return_data(&iso3, &adm_level, &best_match);
         }
     }
 
-    // If no best match is found, return a 404 error
-    Json(Value::String("No matching data found".to_string()))
+    // If no query is provided or no best match is found, attempt to return the data for the entire country
+    attempt_to_return_data(&iso3, &adm_level, "")
+}
+
+fn attempt_to_return_data(iso3: &str, adm_level: &str, best_match: &str) -> Json<Value> {
+    // Convert the ISO3 code to uppercase to handle case sensitivity
+    let iso3_upper = iso3.to_uppercase();
+
+    // Construct the file path for the entire country (ADM0)
+    let project_root = std::env::current_dir().expect("Failed to get current directory");
+    let file_path_adm0 = project_root.join("data/geojsons")
+        .join("ADM0")
+        .join(&iso3_upper)
+        .join(best_match)
+        .with_extension("json");
+
+    // Attempt to read the file for the entire country
+    match fs::read_to_string(file_path_adm0.clone()) {
+        Ok(contents) => {
+            match serde_json::from_str::<Value>(&contents) {
+                Ok(json_value) => Json(json_value),
+                Err(_) => Json(Value::String("Invalid JSON".to_string())),
+            }
+        },
+        Err(_) => {
+            // If the file for the entire country is not found, attempt to find the best match for the adm_level
+            let file_path_best_match = project_root.join("data/geojsons")
+                .join(adm_level)
+                .join(&iso3_upper)
+                .join(best_match)
+                .with_extension("json");
+
+            match fs::read_to_string(file_path_best_match) {
+                Ok(contents) => {
+                    match serde_json::from_str::<Value>(&contents) {
+                        Ok(json_value) => Json(json_value),
+                        Err(_) => Json(Value::String("Invalid JSON".to_string())),
+                    }
+                },
+                Err(e) => {
+                    // Log the error for debugging purposes
+                    eprintln!("Error reading file: {:?}", e);
+                    Json(Value::String("File not found".to_string()))
+                },
+            }
+        },
+    }
 }
 
 // Placeholder function to load all available queries
