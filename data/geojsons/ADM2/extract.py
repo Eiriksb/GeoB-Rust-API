@@ -13,7 +13,8 @@ def split_geojson(input_file):
         data = geojson.load(f)
 
     for feature in data['features']:
-        state_name = feature['properties']['NAME_2'].replace('/', '-')
+        # Use 'shapeName' instead of 'NAME_1' to get the state name
+        state_name = feature['properties']['shapeName'].replace('/', '-')
         output_filename = f"{output_folder}/{state_name}.json"
 
         new_feature_collection = {
@@ -26,6 +27,6 @@ def split_geojson(input_file):
 
 if __name__ == "__main__":
     # Get all files that end with _1.json
-    files = glob.glob('*_2.json')
+    files = glob.glob('*ADM2_simplified.json') or glob.glob('*ADM2_simplified.geojson')
     for file in files:
         split_geojson(file)
