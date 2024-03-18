@@ -7,6 +7,7 @@ use std::fs;
 use rocket::Config;
 use urlencoding::decode;
 use std::borrow::Cow;
+use strsim::jaro_winkler;
 
 #[get("/geojson?<iso3>&<query>&<adm_level>")]
 async fn get_geojson(iso3: String, query: String, adm_level: String) -> Json<Value> {
@@ -75,12 +76,10 @@ fn load_available_queries(iso3: &str, adm_level: &str) -> Vec<String> {
 
 // Placeholder function to find the best match
 fn find_best_match(query: &str, available_queries: &[String]) -> Option<String> {
-    // Implement a similarity check here
-    // This example simply checks if the query is a substring of the available query
     available_queries.iter()
-        .filter(|available_query| available_query.contains(query))
-        .max_by_key(|available_query| available_query.len())
-        .cloned()
+        .map(|available_query| (available_query, jaro_winkler(query, available_query)))
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(query, _)| query.clone())
 }
 
 #[launch]
